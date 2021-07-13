@@ -1,10 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# Дано: каталог, в него периодически льются файлы.
-# Может 1 файл, может папка. Так же файлы могут удалятся. И папки тоже.
-# Надо: написать скрипт, который будет смотреть в целевую папку, при обнаружении изменений будет создаваться отчет.
-# В отчете должна быть информация о файле, его размере, атрибутах, времени изменения.
-# *1: отчет должен быть в формате json для чтения парсерами
 import json
 import os
 import time
@@ -33,34 +28,58 @@ def scan_for_test(path):
 
 
 class MonitorFiles:
+    """
+    Сравнение файлов в директории с предыдущим выполнением
+    :param src: целевая директория для сравнения
+    """
 
     def __init__(self, src):
+        if not os.path.isdir('temp'):
+            os.mkdir('temp')
+        if not os.path.isdir('reports'):
+            os.mkdir('reports')
         if os.path.exists(path):
             self.src = os.path.normpath(src)
         else:
-            print('Не указана начальная папка')
+            print('Не указана начальная директория')
         self.report_file = ''
-        self.diff_add = 'diff_add.txt'
-        self.diff_dell = 'diff_del.txt'
+        self.previous_report_file = ''
+        self.diff_add = os.path.normpath('temp\\diff_add.txt')
+        self.diff_dell = os.path.normpath('temp\\diff_del.txt')
         self.diff = {}
+
+    def run(self):
+        initial_scan = list(os.scandir('reports'))
+        if len(initial_scan) == 0:
+            self.scan()
+            print('Первое сканирование директории')
+        else:
+            self.scan()
+            self.compare()
+            self.report_json()
 
     def scan(self):
         current_date = date.today()
-        self.report_file = 'report_' + str(current_date) + '.txt'
-        with open(self.report_file, 'w+', encoding='utf8') as ff:
+        self.report_file = 'reports\\report_' + str(current_date) + str(time.time()) + '.txt'
+        with open(self.report_file, 'w', encoding='utf8') as ff:
             for dir_path, dir_names, filenames in os.walk(self.src):
                 for file in filenames:
                     full_file_path = os.path.join(dir_path, file)
                     ff.write(f'{full_file_path}\n')
 
     def compare(self):
+        file_list = os.listdir('reports')
+        full_list = [os.path.join('reports', i) for i in file_list]
+        time_sorted_list = sorted(full_list, key=os.path.getmtime)
+        self.previous_report_file = time_sorted_list[-2]
+
         with open(self.report_file) as report_file:
-            with open('report.txt') as report_old:
+            with open(self.previous_report_file) as report_old:
                 with open(self.diff_add, 'w', encoding='utf8') as diff:
                     diff.writelines(set(report_file).difference(report_old))
 
         with open(self.report_file) as report_file:
-            with open('report.txt') as report_old:
+            with open(self.previous_report_file) as report_old:
                 with open(self.diff_dell, 'w', encoding='utf8') as diff:
                     diff.writelines(set(report_old).difference(report_file))
 
@@ -85,14 +104,11 @@ class MonitorFiles:
 
 
 @time_track
-def main(path):
-    monitor_path = MonitorFiles(src=path)
-    monitor_path.scan()
-    monitor_path.compare()
-    monitor_path.report_json()
+def main(folder):
+    monitor_path = MonitorFiles(src=folder)
+    monitor_path.run()
 
 
 if __name__ == '__main__':
     path = 'C:\\Windows\\'
-    # scan_for_test(path)   # необходима для первичного создания отчета для сравнения
-    main(path)
+    main(folder=path)
