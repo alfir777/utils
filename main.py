@@ -3,7 +3,10 @@
 import json
 import os
 import time
+import zipfile
 from datetime import date
+import smtplib
+import config
 
 
 def time_track(func):
@@ -27,6 +30,13 @@ def scan_for_test(path):
                 ff.write(f'{full_file_path}\n')
 
 
+def report_to_email():
+    smtp_obj = smtplib.SMTP('smtp.yandex.ru', 465)
+    smtp_obj.starttls()
+    smtp_obj.login(config.sender_login, config.sender_password)
+    smtp_obj.sendmail('admin@jatu.ru', 'test')
+
+
 class MonitorFiles:
     """
     Сравнение файлов в директории с предыдущим выполнением
@@ -38,12 +48,13 @@ class MonitorFiles:
             os.mkdir('temp')
         if not os.path.isdir('reports'):
             os.mkdir('reports')
-        if os.path.exists(path):
+        if os.path.exists(src):
             self.src = os.path.normpath(src)
         else:
             print('Не указана начальная директория')
-        self.report_file = ''
+        self.report_file = 'reports\\report_' + str(date.today()) + str(time.time()) + '.txt'
         self.previous_report_file = ''
+        self.json_report_file = 'report.json'
         self.diff_add = os.path.normpath('temp\\diff_add.txt')
         self.diff_dell = os.path.normpath('temp\\diff_del.txt')
         self.diff = {}
@@ -57,10 +68,9 @@ class MonitorFiles:
             self.scan()
             self.compare()
             self.report_json()
+            self.add_zip()
 
     def scan(self):
-        current_date = date.today()
-        self.report_file = 'reports\\report_' + str(current_date) + str(time.time()) + '.txt'
         with open(self.report_file, 'w', encoding='utf8') as ff:
             for dir_path, dir_names, filenames in os.walk(self.src):
                 for file in filenames:
@@ -99,16 +109,20 @@ class MonitorFiles:
                 file_name = os.path.basename(line)
                 self.diff[file_name] = ('DELETE', line)
         json_data_sorted = json.dumps(self.diff, indent=4, sort_keys=True)
-        with open('report.json', 'w', encoding='utf8') as file:
+        with open(self.json_report_file, 'w', encoding='utf8') as file:
             file.write(json_data_sorted)
+
+    def add_zip(self):
+        with zipfile.ZipFile('report.zip', 'w') as file_zip:
+            file_zip.write(self.json_report_file, compress_type=zipfile.ZIP_DEFLATED)
 
 
 @time_track
-def main(folder):
-    monitor_path = MonitorFiles(src=folder)
+def main(path):
+    monitor_path = MonitorFiles(src=path)
     monitor_path.run()
 
 
 if __name__ == '__main__':
-    path = 'C:\\Windows\\'
-    main(folder=path)
+    folder = 'C:\\Windows\\'
+    main(path=folder)
