@@ -12,6 +12,7 @@ def json_reformat(input_file, indent=4, sort_keys=True):
                     data = ast.literal_eval(line)
                 except SyntaxError as exс:
                     print(f'ошибка в строке: {line}')
+                    continue
                 if data["deleted"]:
                     res.append(data)
         json_data = json.dumps(res, indent=indent, sort_keys=sort_keys)
