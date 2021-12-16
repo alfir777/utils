@@ -2,6 +2,17 @@ import ast
 import json
 import os
 import jsondiff
+from os import system, name
+
+
+# define the clear function
+def clear():
+    # for windows
+    if name == 'nt':
+        _ = system('cls')
+    # for mac and linux(here, os.name is 'posix')
+    else:
+        _ = system('clear')
 
 
 def get_directory(user_input=1):
@@ -35,28 +46,31 @@ def diff_directory():
         with open('report_for_diff.json', 'r', encoding='utf-8') as ff2:
             json_data1 = ff1.read()
             json_data2 = ff2.read()
-            jsondiff_data = jsondiff.diff(json_data1, json_data2, load=True, dump=True)
-    json_data = json.dumps(ast.literal_eval(jsondiff_data), indent=4, sort_keys=True, ensure_ascii=False)
+            json_diff_data = jsondiff.diff(json_data1, json_data2, load=True, dump=True)
+    json_data = json.dumps(ast.literal_eval(json_diff_data), indent=4, sort_keys=True, ensure_ascii=False)
     with open('diff_report.json', 'w+', encoding='utf-8') as ff:
         ff.write(json_data)
 
 
 def main():
-    user_input = input('1. Сформировать начальный файл\n'
-                       '2. Сформировать файл сравнения\n'
-                       '3. Сравнить два файла\n')
-    if user_input == '1':
-        get_directory(user_input=1)
-    elif user_input == '2':
-        get_directory(user_input=2)
-    elif user_input == '3':
-        if not os.path.exists('report_initial.json'):
-            exit('Нет начального файла')
-        if not os.path.exists('report_for_diff.json'):
-            exit('Нет файла для сравнения')
-        diff_directory()
-    else:
-        exit('Ничего не выбрано')
+    while True:
+        user_input = input('1. Сформировать начальный файл\n'
+                           '2. Сформировать файл сравнения\n'
+                           '3. Сравнить два файла\n'
+                           '4. Выйти или любой символ\n')
+        if user_input == '1':
+            get_directory(user_input=1)
+        elif user_input == '2':
+            get_directory(user_input=2)
+        elif user_input == '3':
+            if not os.path.exists('./report_initial.json'):
+                exit('Нет начального файла')
+            if not os.path.exists('./report_for_diff.json'):
+                exit('Нет файла для сравнения')
+            diff_directory()
+        else:
+            exit('Ничего не выбрано')
+        clear()
 
 
 if __name__ == '__main__':
